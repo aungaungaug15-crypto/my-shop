@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Shop</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+<header>
+  <h1><a href="/">🛍️ My Shop</a></h1>
+  <nav>
+    <% if (user) { %>
+      <span style="color:white; margin-right:15px;"><%= user.name %></span>
+      <a href="/cart">🛒 Cart (<%= cart.length %>)</a>
+      <a href="/logout">ထွက်မယ်</a>
+    <% } else { %>
+      <a href="/login">ဝင်မယ်</a>
+    <% } %>
+  </nav>
+</header>
+<main>

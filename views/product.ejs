@@ -1,0 +1,33 @@
+<%- include('partials/header') %>
+
+<div style="margin-bottom: 20px;">
+  <a href="/" style="text-decoration: none; color: #2563eb; font-weight: bold;">← ပင်မစာမျက်နှာသို့ ပြန်သွားမည်</a>
+</div>
+
+<div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-bottom: 25px; text-align: center;">
+  <div style="font-size: 3rem;"><%= service.icon %></div>
+  <h2 style="margin-top: 10px;"><%= service.name %></h2>
+  <p style="color: #64748b; margin-top: 5px;"><%= service.description %></p>
+</div>
+
+<h3 style="margin-bottom: 15px;">🌐 ရရှိနိုင်သော နိုင်ငံများနှင့် စျေးနှုန်းများ:</h3>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;">
+  <% service.countries.forEach(c => { %>
+    <div style="background: white; padding: 18px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <div style="font-size: 2rem; margin-bottom: 5px;"><%= c.flag %></div>
+        <h3 style="margin-bottom: 5px;"><%= c.name %></h3>
+        <p style="font-size: 0.85rem; color: #64748b;">Country Code: <%= c.code %></p>
+        <div style="font-size: 1.2rem; font-weight: bold; color: #2563eb; margin: 12px 0;">
+          <%= c.price %> MMK
+        </div>
+      </div>
+      <a href="/select-number/<%= service.id %>/<%= c.id %>" style="display: block; text-align: center; background: #10b981; color: white; padding: 10px; border-radius: 8px; font-weight: bold; text-decoration: none;">
+        နံပါတ်ဝယ်မည်
+      </a>
+    </div>
+  <% }) %>
+</div>
+
+<%- include('partials/footer') %>

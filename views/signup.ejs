@@ -1,0 +1,18 @@
+<%- include('partials/header') %>
+<div class="login-container">
+  <h2>အကောင့်ဖွင့်ရန်</h2>
+  <% if (error) { %>
+    <p class="error"><%= error %></p>
+  <% } %>
+  <form action="/signup" method="POST">
+    <label>အမည်</label>
+    <input type="text" name="name" required/>
+    <label>Gmail</label>
+    <input type="email" name="email" required/>
+    <label>Password</label>
+    <input type="password" name="password" required/>
+    <button type="submit">အကောင့်ဖွင့်မယ်</button>
+  </form>
+  <p>အကောင့်ရှိပြီးသားလား? <a href="/login">ဝင်မယ်</a></p>
+</div>
+<%- include('partials/footer') %>

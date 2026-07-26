@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SELECT_COUNTRY // CYBER_OTP</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Share Tech Mono', monospace;
+            background-color: #05050a;
+            background-image: 
+                linear-gradient(rgba(0, 255, 204, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 204, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: #00ffcc;
+            min-height: 100vh;
+        }
+        .cyber-nav {
+            background: rgba(10, 10, 26, 0.9);
+            border-bottom: 2px solid #00ffcc;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.2);
+        }
+        .cyber-card {
+            background: rgba(10, 10, 26, 0.85);
+            border: 2px solid #00ffcc;
+            border-radius: 4px;
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
+            position: relative;
+        }
+        .cyber-item {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #00ffcc;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: #00ffcc;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 20px;
+        }
+        .cyber-item:hover {
+            border-color: #ff007f;
+            background: rgba(255, 0, 127, 0.1);
+            color: #fff;
+            box-shadow: 0 0 10px rgba(255, 0, 127, 0.4);
+            transform: translateX(4px);
+        }
+        .cyber-title {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 800;
+            color: #fff;
+            text-shadow: 0 0 10px #00ffcc;
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar cyber-nav px-4 py-3 mb-4">
+        <div class="container-fluid d-flex justify-content-between align-items-center">
+            <span class="cyber-title fs-5"><i class="fas fa-microchip me-2"></i> CYBER_OTP_NET</span>
+            <a href="/logout" class="btn btn-outline-danger btn-sm rounded-0 px-3" style="font-family: 'Orbitron'; font-size: 0.75rem;">LOGOUT</a>
+        </div>
+    </nav>
+    <div class="container" style="max-width: 500px; margin-top: 30px;">
+        <div class="cyber-card p-4 p-md-5">
+            <div class="text-center mb-4">
+                <h4 class="cyber-title">SELECT_REGION</h4>
+                <p class="text-secondary small">> CHOOSE_TARGET_COUNTRY_NODE</p>
+            </div>
+            <div class="d-flex flex-column gap-3">
+                <% countries.forEach(country => { %>
+                    <a href="/numbers/<%= serviceId %>/<%= country.id %>" class="cyber-item">
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="fs-3"><%= country.flag %></span>
+                            <span class="fw-bold fs-5" style="font-family: 'Orbitron';"><%= country.name %></span>
+                        </div>
+                        <i class="fas fa-chevron-right text-pink" style="color: #ff007f;"></i>
+                    </a>
+                <% }) %>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

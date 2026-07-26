@@ -1,0 +1,19 @@
+<%- include('partials/header') %>
+<h2>အော်ဒါတင်ရန်</h2>
+<form action="/order" method="POST">
+  <label>အမည် *</label>
+  <input type="text" name="name" required/>
+  <label>ဖုန်းနံပါတ် *</label>
+  <input type="text" name="phone" required/>
+  <label>လိပ်စာ *</label>
+  <textarea name="address" required></textarea>
+  <h3>အော်ဒါအသေးစိတ်</h3>
+  <ul>
+    <% cart.forEach(item => { %>
+      <li><%= item.name %> x <%= item.qty %> - <%= (item.price * item.qty).toLocaleString() %> Ks</li>
+    <% }) %>
+  </ul>
+  <p class="total">စုစုပေါင်း: <%= total.toLocaleString() %> Ks</p>
+  <button type="submit" class="btn-submit">အတည်ပြုအော်ဒါတင်မယ်</button>
+</form>
+<%- include('partials/footer') %>

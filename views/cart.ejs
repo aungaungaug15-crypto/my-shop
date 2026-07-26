@@ -1,0 +1,32 @@
+<%- include('partials/header') %>
+<h2>သင့်ခြင်း</h2>
+<% if (cart.length > 0) { %>
+  <table>
+    <tr><th>ပစ္စည်း</th><th>ဈေး</th><th>အရေအတွက်</th><th>စုစုပေါင်း</th><th></th></tr>
+    <% cart.forEach(item => { %>
+      <tr>
+        <td><%= item.name %></td>
+        <td><%= item.price.toLocaleString() %> Ks</td>
+        <td>
+          <form action="/cart/update/<%= item.id %>" method="POST" style="display:inline;">
+            <input type="number" name="qty" value="<%= item.qty %>" min="0" style="width:60px"/>
+            <button type="submit">ပြောင်းမယ်</button>
+          </form>
+        </td>
+        <td><%= (item.price * item.qty).toLocaleString() %> Ks</td>
+        <td>
+          <form id="remove-<%= item.id %>" action="/cart/update/<%= item.id %>" method="POST" style="display:none;">
+            <input type="hidden" name="qty" value="0"/>
+          </form>
+          <a href="#" onclick="event.preventDefault(); document.getElementById('remove-<%= item.id %>').submit()">ဖယ်မယ်</a>
+        </td>
+      </tr>
+    <% }) %>
+  </table>
+  <p class="total">စုစုပေါင်း: <%= total.toLocaleString() %> Ks</p>
+  <a href="/checkout" class="btn-checkout">အော်ဒါတင်မယ်</a>
+<% } else { %>
+  <p>ခြင်းထဲမှာ ပစ္စည်းမရှိသေးပါ။</p>
+<% } %>
+<a href="/">ဆက်ဝယ်မယ်</a>
+<%- include('partials/footer') %>

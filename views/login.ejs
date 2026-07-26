@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CYBER_LOGIN // OTP_SYS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Share Tech Mono', monospace;
+            background-color: #05050a;
+            background-image: 
+                linear-gradient(rgba(0, 255, 204, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 204, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: #00ffcc;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 20px;
+        }
+        .cyber-card {
+            background: rgba(10, 10, 26, 0.85);
+            border: 2px solid #00ffcc;
+            border-radius: 4px;
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.3), inset 0 0 15px rgba(0, 255, 204, 0.1);
+            width: 100%;
+            max-width: 420px;
+            padding: 35px;
+            position: relative;
+        }
+        .cyber-card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            width: 15px;
+            height: 15px;
+            background: #ff007f;
+            border-bottom: 2px solid #00ffcc;
+            border-left: 2px solid #00ffcc;
+        }
+        .form-control {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #00ffcc;
+            color: #00ffcc;
+            padding: 12px;
+            border-radius: 2px;
+            font-family: 'Share Tech Mono', monospace;
+        }
+        .form-control:focus {
+            background: rgba(0, 0, 0, 0.9);
+            border-color: #ff007f;
+            color: #00ffcc;
+            box-shadow: 0 0 10px rgba(255, 0, 127, 0.5);
+        }
+        .form-label {
+            color: #ff007f;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .btn-cyber {
+            background: #00ffcc;
+            border: none;
+            color: #05050a;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            padding: 12px;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 255, 204, 0.4);
+        }
+        .btn-cyber:hover {
+            background: #ff007f;
+            color: #fff;
+            box-shadow: 0 0 15px rgba(255, 0, 127, 0.8);
+        }
+        .btn-google-cyber {
+            background: transparent;
+            color: #00ffcc;
+            border: 1px solid #00ffcc;
+            font-family: 'Share Tech Mono', monospace;
+            font-weight: 600;
+            padding: 12px;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+        .btn-google-cyber:hover {
+            background: rgba(0, 255, 204, 0.1);
+            color: #fff;
+            border-color: #ff007f;
+        }
+        .cyber-title {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 800;
+            color: #fff;
+            text-shadow: 0 0 10px #00ffcc;
+            letter-spacing: 2px;
+        }
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: #64748b;
+            font-size: 0.8rem;
+            margin: 20px 0;
+            text-transform: uppercase;
+        }
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px dashed #00ffcc;
+            opacity: 0.4;
+        }
+        .divider::before { margin-right: 15px; }
+        .divider::after { margin-left: 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="cyber-card">
+        <div class="text-center mb-4">
+            <h4 class="cyber-title mb-1" id="form-title">ACCESS // LOGIN</h4>
+            <p class="text-secondary small m-0">[ SECURE_OTP_NET_V2.6 ]</p>
+        </div>
+        
+        <% if (error) { %>
+            <div class="alert alert-danger py-2 border border-danger bg-danger bg-opacity-15 text-danger small rounded-0 mb-3"><%= error %></div>
+        <% } %>
+        <% if (success) { %>
+            <div class="alert alert-success py-2 border border-success bg-success bg-opacity-15 text-success small rounded-0 mb-3"><%= success %></div>
+        <% } %>
+
+        <form id="auth-form" action="/login" method="POST">
+            <div class="mb-3">
+                <label class="form-label">Neural_ID (Gmail)</label>
+                <input type="email" name="email" class="form-control" required placeholder="user@net.com">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Passcode</label>
+                <input type="password" name="password" class="form-control" required placeholder="********">
+            </div>
+            <button type="submit" id="submit-btn" class="btn btn-cyber w-100 mb-3">INITIALIZE</button>
+        </form>
+
+        <div class="text-center mb-2">
+            <a href="#" id="toggle-link" class="text-decoration-none text-info small" style="letter-spacing: 1px;" onclick="toggleMode(event)">>> NEW_USER? REGISTER_NOW</a>
+        </div>
+
+        <div class="divider">OR</div>
+
+        <a href="/auth/google" class="btn btn-google-cyber w-100 d-flex align-items-center justify-content-center gap-2">
+            <i class="fab fa-google"></i>
+            <span>AUTH_VIA_GOOGLE</span>
+        </a>
+    </div>
+
+    <script>
+        let isSignup = false;
+        function toggleMode(event) {
+            event.preventDefault();
+            isSignup = !isSignup;
+            const title = document.getElementById('form-title');
+            const form = document.getElementById('auth-form');
+            const btn = document.getElementById('submit-btn');
+            const toggleLink = document.getElementById('toggle-link');
+
+            if (isSignup) {
+                title.innerText = 'REGISTER // NEW';
+                form.action = '/signup';
+                btn.innerText = 'CREATE_ACCOUNT';
+                toggleLink.innerText = '>> EXISTING_USER? LOGIN';
+            } else {
+                title.innerText = 'ACCESS // LOGIN';
+                form.action = '/login';
+                btn.innerText = 'INITIALIZE';
+                toggleLink.innerText = '>> NEW_USER? REGISTER_NOW';
+            }
+        }
+    </script>
+</body>
+</html>

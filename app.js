@@ -14,11 +14,48 @@ const escapeHtml = (str) => {
         .replace(/'/g, '&#039;');
 };
 
-// စာသားထဲမှ OTP Code သို့မဟုတ် ဂဏန်းများကိုသာ သီးသန့်ရှာပေးသည့် Function
-const extractOtp = (text) => {
-    // စာသားထဲတွင် ၄ လုံးမှ ၈ လုံးအထိပါသော ဂဏန်း (OTP Code) ကို ရှာမည်
-    const match = text.match(/\b\d{4,8}\b/);
-    return match ? match[0] : null;
+// ရှုပ်ထွေးနေသော စာသားများထဲမှ OTP Code များနှင့် စာများကို ခွဲထုတ်ပေးသည့် Function
+const parseMessages = (data) => {
+    let rawText = '';
+
+    if (Array.isArray(data)) {
+        rawText = data.map(m => typeof m === 'string' ? m : JSON.stringify(m)).join(' ');
+    } else if (typeof data === 'object' && data !== null) {
+        rawText = JSON.stringify(data);
+    } else {
+        rawText = String(data || '');
+    }
+
+    // "Your code is: 123456" သို့မဟုတ် "verification code 123456" စသည့် ပုံစံများကို တိတိကျကျ ရှာမည်
+    const otpKeywordsRegex = /(?:code|verification|otp|is)[:\s]*([0-9]{4,8})/gi;
+    const extractedList = [];
+    let match;
+
+    while ((match = otpKeywordsRegex.exec(rawText)) !== null) {
+        if (match[1]) {
+            extractedList.push({
+                code: match[1],
+                time: extractedList.length === 0 ? 'Just now' : 'Older'
+            });
+        }
+    }
+
+    // အကယ်၍ Keyword မပါဘဲ ဂဏန်း သီးသန့်ဖြစ်နေပါက
+    if (extractedList.length === 0) {
+        const generalNumbers = rawText.match(/\b\d{4,8}\b/g) || [];
+        // mins ago စသည့် စာသားဘေးက ဂဏန်းအရှည်ကြီးများကို ဖယ်ထုတ်ပါမည်
+        generalNumbers.forEach((num, index) => {
+            if (num.length >= 4 && num.length <= 8) {
+                extractedList.push({
+                    code: num,
+                    time: index === 0 ? 'Just now' : 'Older'
+                });
+            }
+        });
+    }
+
+    // အသစ်ဆုံး OTP ကို အပေါ်ဆုံးရောက်စေရန် Array ကို ပြောင်းပြန် (Reverse) လှန်ပေးမည်
+    return extractedList.reverse();
 };
 
 const htmlTemplate = (phoneNumber, messagesHtml) => `
@@ -81,6 +118,10 @@ const htmlTemplate = (phoneNumber, messagesHtml) => `
             box-shadow: 0 0 10px rgba(0, 255, 204, 0.15);
             text-align: left;
         }
+        .sms-card.latest {
+            border-color: #ff007f;
+            box-shadow: 0 0 15px rgba(255, 0, 127, 0.4);
+        }
         .sms-header {
             display: flex;
             justify-content: space-between;
@@ -95,9 +136,9 @@ const htmlTemplate = (phoneNumber, messagesHtml) => `
             background-color: rgba(255, 0, 127, 0.2);
             border: 1px solid #ff007f;
             color: #ff007f;
-            font-size: 20px;
+            font-size: 22px;
             font-weight: bold;
-            padding: 6px 12px;
+            padding: 6px 14px;
             border-radius: 4px;
             letter-spacing: 2px;
             margin-top: 5px;
@@ -136,33 +177,29 @@ app.get('/numbers/:id/:country', async (req, res) => {
     
     try {
         const apiResponse = await axios.get(`https://api.example.com/messages?id=${encodeURIComponent(id)}&country=${encodeURIComponent(country)}`).catch(() => null);
-        let messages = apiResponse && apiResponse.data ? apiResponse.data : [];
+        let rawData = apiResponse && apiResponse.data ? apiResponse.data : [];
 
-        // စာသားအရှည်ကြီးတွေနဲ့ OTP မပါတဲ့ ရှုပ်ထွေးနေသော message တွေကို Filter ပစ်ပါမည်
-        let validMessages = messages.filter(msg => {
-            const rawText = typeof msg === 'string' ? msg : (msg.text || JSON.stringify(msg));
-            return extractOtp(rawText) !== null; // OTP ဂဏန်းပါမှသာ လက်ခံမည်
-        });
+        // စာအုပ်ကြီးလို ရှုပ်နေသော String ထဲမှ OTP များကို သန့်စင်ပြီး ခွဲထုတ်ပါမည်
+        let parsedOtps = parseMessages(rawData);
 
         let messagesHtml = '';
 
-        if (!validMessages || validMessages.length === 0) {
+        if (!parsedOtps || parsedOtps.length === 0) {
             messagesHtml = '<div class="no-msg">No valid OTP messages detected yet...</div>';
         } else {
-            messagesHtml = validMessages.map((msg, index) => {
-                const rawText = typeof msg === 'string' ? msg : (msg.text || JSON.stringify(msg));
-                const otpCode = extractOtp(rawText);
-                const timeText = msg.time || (index === 0 ? 'Just now' : 'Older');
+            messagesHtml = parsedOtps.map((item, index) => {
+                const isLatest = index === 0;
+                const timeTag = isLatest ? 'LATEST // JUST NOW' : 'OLDER';
 
                 return `
-                    <div class="sms-card">
+                    <div class="sms-card ${isLatest ? 'latest' : ''}">
                         <div class="sms-header">
-                            <span>SMS_SERVICE</span>
-                            <span>${escapeHtml(timeText)}</span>
+                            <span>SMS_SERVICE ${isLatest ? '[NEW]' : ''}</span>
+                            <span>${escapeHtml(timeTag)}</span>
                         </div>
                         <div class="sms-body">
                             <div>OTP_CODE:</div>
-                            <div class="otp-box">${escapeHtml(otpCode)}</div>
+                            <div class="otp-box">${escapeHtml(item.code)}</div>
                         </div>
                     </div>
                 `;

@@ -1,319 +1,151 @@
-require('dotenv').config();
 const express = require('express');
-const session = require('express-session');
-const path = require('path');
-const fs = require('fs');
 const axios = require('axios');
-const cheerio = require('cheerio');
-
 const app = express();
-const PORT = process.env.PORT || 3001;
-const DB_FILE = path.join(__dirname, 'orders.json');
-const USERS_FILE = path.join(__dirname, 'users.json');
+const PORT = process.env.PORT || 3000;
 
-const GOOGLE_CONFIG = {
-  clientId: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackUrl: process.env.GOOGLE_CALLBACK_URL
-};
+const htmlTemplate = (phoneNumber, messagesHtml) => `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyberpunk OTP Receiver</title>
+    <style>
+        body {
+            background-color: #05050a;
+            color: #00ffcc;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        h1 {
+            font-size: 24px;
+            text-shadow: 0 0 10px #00ffcc;
+            word-break: break-all;
+        }
+        .btn-copy {
+            background-color: #00ffcc;
+            color: #05050a;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.5);
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            border: 1px solid #00ffcc;
+            padding: 15px;
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.2);
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 8px;
+        }
+        .section-title {
+            text-align: left;
+            font-size: 14px;
+            color: #ff007f;
+            text-shadow: 0 0 5px #ff007f;
+            margin-bottom: 10px;
+            border-bottom: 1px dashed #ff007f;
+            padding-bottom: 5px;
+        }
+        .sms-card {
+            background: rgba(0, 255, 204, 0.03);
+            border: 1px solid #00ffcc;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 12px;
+            box-shadow: 0 0 10px rgba(0, 255, 204, 0.15);
+            text-align: left;
+        }
+        .sms-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #00ffcc;
+            margin-bottom: 6px;
+            border-bottom: 1px dashed rgba(0, 255, 204, 0.3);
+            padding-bottom: 4px;
+        }
+        .sms-body {
+            font-size: 13px;
+            word-break: break-all;
+            line-height: 1.4;
+            color: #ffffff;
+        }
+        .no-msg {
+            color: #888;
+            padding: 20px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
 
-function getUsers() {
-  if (!fs.existsSync(USERS_FILE)) return [];
-  try { return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8')); }
-  catch (e) { return []; }
-}
-function saveUsers(users) {
-  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
-}
+    <h1>+${phoneNumber}</h1>
+    <button class="btn-copy" onclick="navigator.clipboard.writeText('+${phoneNumber}'); alert('Number Copied!');">COPY NUMBER</button>
 
-function getPhoneNumbersFromEnv() {
-  const envPhones = process.env.MY_PHONES;
-  if (!envPhones) return { us: [], mm: [] };
-  const phones = envPhones.split(',').map(p => p.trim()).filter(Boolean);
-  return {
-    us: phones.filter(p => p.startsWith('+1')),
-    mm: phones.filter(p => p.startsWith('+95'))
-  };
-}
+    <div class="container">
+        <div class="section-title">INCOMING_SMS_STREAM // LIVE</div>
+        <div id="sms-container">
+            ${messagesHtml}
+        </div>
+    </div>
 
-function getOrders() {
-  if (!fs.existsSync(DB_FILE)) return [];
-  try { return JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); }
-  catch (e) { return []; }
-}
-function saveOrders(orders) {
-  fs.writeFileSync(DB_FILE, JSON.stringify(orders, null, 2));
-}
+</body>
+</html>
+`;
 
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-app.use(session({
-  secret: 'myshopsecret2024',
-  resave: false,
-  saveUninitialized: true,
-  cookie: { maxAge: 86400000 }
-}));
-
-app.use((req, res, next) => {
-  res.locals.user = req.session.user || null;
-  next();
-});
-
-function requireAuth(req, res, next) {
-  if (!req.session.user) return res.redirect('/login');
-  next();
-}
-
-app.get('/login', (req, res) => {
-  if (req.session.user) return res.redirect('/');
-  res.render('login', { error: null, success: null });
-});
-
-app.post('/signup', (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
-    return res.render('login', { error: 'ကျေးဇူးပြု၍ Gmail နှင့် Password အပြည့်အစုံထည့်ပါ။', success: null });
-  }
-  let users = getUsers();
-  if (users.find(u => u.email === email)) {
-    return res.render('login', { error: 'ဤ Gmail ဖြင့် အကောင့်ရှိပြီးသား ဖြစ်ပါသည်။', success: null });
-  }
-  users.push({ email, password, name: email.split('@')[0] });
-  saveUsers(users);
-  res.render('login', { error: null, success: 'အကောင့်ဖွင့်ခြင်း အောင်မြင်ပါသည်။ ကျေးဇူးပြု၍ အကောင့်ဝင်ပါ။' });
-});
-
-app.post('/login', (req, res) => {
-  const { email, password } = req.body;
-  let users = getUsers();
-  const user = users.find(u => u.email === email && u.password === password);
-  if (!user) {
-    return res.render('login', { error: 'Gmail သို့မဟုတ် Password မှားယွင်းနေပါသည်။', success: null });
-  }
-  req.session.user = { name: user.name, email: user.email };
-  res.redirect('/');
-});
-
-app.get('/logout', (req, res) => {
-  req.session.destroy();
-  res.redirect('/login');
-});
-
-app.get('/auth/google', (req, res) => {
-  if (!GOOGLE_CONFIG.clientId || GOOGLE_CONFIG.clientId.includes('your_actual_google_client_id')) {
-    return res.render('login', { error: '.env တွင် Google Client ID ကို မှန်ကန်စွာ ထည့်သွင်းပါ', success: null });
-  }
-  const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CONFIG.clientId}&redirect_uri=${encodeURIComponent(GOOGLE_CONFIG.callbackUrl)}&response_type=code&scope=email%20profile`;
-  res.redirect(googleAuthUrl);
-});
-
-app.get('/auth/google/callback', async (req, res) => {
-  const { code } = req.query;
-  if (!code) return res.redirect('/login');
-  try {
-    const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', {
-      code,
-      client_id: GOOGLE_CONFIG.clientId,
-      client_secret: GOOGLE_CONFIG.clientSecret,
-      redirect_uri: GOOGLE_CONFIG.callbackUrl,
-      grant_type: 'authorization_code'
-    });
-    const { access_token } = tokenResponse.data;
-    const userResponse = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: `Bearer ${access_token}` }
-    });
-    const { name, email } = userResponse.data;
-    req.session.user = { name, email };
-    res.redirect('/');
-  } catch (error) {
-    res.redirect('/login');
-  }
-});
-
-app.get('/', requireAuth, (req, res) => {
-  const serviceId = '1';
-  const serviceName = 'Telegram';
-  const countries = [
-    { id: 'mm', name: 'Myanmar', flag: '🇲🇲' },
-    { id: 'us', name: 'United States', flag: '🇺🇸' }
-  ];
-  res.render('countries', { serviceId, serviceName, countries });
-});
-
-app.get('/numbers/:serviceId/:countryId', requireAuth, (req, res) => {
-  const { serviceId, countryId } = req.params;
-  const serviceName = 'Telegram';
-  const countryNames = { 'mm': 'Myanmar', 'us': 'United States' };
-  const countryFlags = { 'mm': '🇲🇲', 'us': '🇺🇸' };
-
-  const envPhonesObj = getPhoneNumbersFromEnv();
-  let filteredPhones = countryId === 'mm' ? envPhonesObj.mm : envPhonesObj.us;
-
-  if (filteredPhones.length === 0) {
-    filteredPhones = countryId === 'mm' ? ["+95991234567"] : ["+12029462199"];
-  }
-
-  let orders = getOrders();
-  let currentOrders = orders.filter(o => String(o.serviceId) === String(serviceId) && o.countryId === countryId);
-
-  if (currentOrders.length === 0) {
-    const baseTime = Date.now();
-    filteredPhones.forEach((phoneNum, index) => {
-      orders.unshift({
-        id: baseTime - (index * 1000),
-        userName: req.session.user.name,
-        userEmail: req.session.user.email,
-        serviceId: serviceId,
-        countryId: countryId,
-        serviceName: serviceName,
-        countryName: countryNames[countryId] || 'United States',
-        countryFlag: countryFlags[countryId] || '🇺🇸',
-        phone: phoneNum,
-        messages: [{ id: 1, sender: 'System', code: '------', text: 'Waiting for live SMS...', time: 'Just now' }],
-        price: 2000,
-        status: 'ACTIVE',
-        created_at: new Date().toLocaleString()
-      });
-    });
-    saveOrders(orders);
-    currentOrders = orders.filter(o => String(o.serviceId) === String(serviceId) && o.countryId === countryId);
-  }
-
-  res.render('numbers', {
-    serviceId,
-    countryId,
-    serviceName,
-    countryName: countryNames[countryId] || 'United States',
-    countryFlag: countryFlags[countryId] || '🇺🇸',
-    phones: currentOrders
-  });
-});
-
-// ၁ မိနစ်အတွင်း ကျရောက်သော မက်ဆေ့န်းဂျာများကိုသာ Recent ဟု သတ်မှတ်ပေးသည့် ဖန်ရှင်
-function extractSmsTime(fullText) {
-  const lower = fullText.toLowerCase();
-  
-  // စာသားထဲတွင် မိနစ်ပိုင်း၊ စက္ကန့်ပိုင်းဆိုင်ရာ စကားလုံးများ ရှာဖွေခြင်း
-  if (lower.includes('just now') || lower.includes('seconds ago') || lower.includes('sec ago')) {
-    return 'Just now';
-  }
-  
-  const minMatch = fullText.match(/(\d+)\s*(m|min|minutes?)\s*ago/i);
-  if (minMatch) {
-    const minutes = parseInt(minMatch[1], 10);
-    if (minutes <= 1) {
-      return '1 min ago'; // ၁ မိနစ် သို့မဟုတ် ထိုထက်နည်းပါက
-    }
-    return `${minutes} mins ago`;
-  }
-
-  const hourMatch = fullText.match(/(\d+)\s*(h|hr|hours?)\s*ago/i);
-  if (hourMatch) {
-    return `${hourMatch[1]} hr ago`;
-  }
-
-  return 'Older';
-}
-
-async function scrapeSmsForOrder(order) {
-  try {
-    const cleanPhone = order.phone.replace('+', '');
-    const targetUrl = order.countryId === 'us' 
-      ? `https://instantnum.com/countries/united-states/%2B${cleanPhone}`
-      : `https://receive-smss.com/sms/${cleanPhone}/`;
-
-    const { data } = await axios.get(targetUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Referer': 'https://instantnum.com/'
-      },
-      timeout: 12000
-    });
+app.get('/numbers/:id/:country', async (req, res) => {
+    const { id, country } = req.params;
     
-    const $ = cheerio.load(data);
-    let scrapedMessages = [];
+    try {
+        const apiResponse = await axios.get(`https://api.example.com/messages?id=${id}&country=${country}`).catch(() => null);
+        let messages = apiResponse && apiResponse.data ? apiResponse.data : [];
 
-    $('tr, .message-row, .sms-item, div').each((i, element) => {
-      const text = $(element).text().trim();
-      if (text.length > 5 && /\b\d{4,8}\b/.test(text)) {
-        const tds = $(element).find('td');
-        let sender = 'SMS Service';
-        let smsText = text.replace(/\s+/g, ' ');
+        let messagesHtml = '';
 
-        if (tds.length >= 2) {
-          sender = $(tds[0]).text().trim() || 'SMS Service';
-          smsText = $(tds[1]).text().trim() || text;
+        if (!messages || messages.length === 0) {
+            messagesHtml = '<div class="no-msg">No incoming messages detected yet...</div>';
+        } else {
+            messagesHtml = messages.map((msg, index) => {
+                const textContent = typeof msg === 'string' ? msg : (msg.text || JSON.stringify(msg));
+                const timeText = msg.time || 'Just now';
+
+                return `
+                    <div class="sms-card">
+                        <div class="sms-header">
+                            <span>SMS_PACKET #${index + 1}</span>
+                            <span>${timeText}</span>
+                        </div>
+                        <div class="sms-body">
+                            ${textContent}
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
-        const otpMatch = smsText.match(/\b\d{4,8}\b/);
-        const code = otpMatch ? otpMatch[0] : '------';
-        
-        // အမှန်တကယ် ရခဲ့သည့် အချိန်ကို ထုတ်ယူခြင်း
-        const actualTime = extractSmsTime(smsText);
+        res.send(htmlTemplate(id || '12029462199', messagesHtml));
 
-        if (!scrapedMessages.some(m => m.text === smsText)) {
-          scrapedMessages.push({
-            id: scrapedMessages.length + 1,
-            sender: sender,
-            code: code,
-            text: smsText,
-            time: actualTime // တကယ်ကျလာသည့် အချိန်အတိအကျ (သို့) 1 min ago ကို ပြပေးမည်
-          });
-        }
-      }
-    });
-
-    return scrapedMessages;
-  } catch (error) {
-    return [];
-  }
-}
-
-app.get('/api/sync-sms/:orderId', requireAuth, async (req, res) => {
-  let orders = getOrders();
-  const order = orders.find(o => String(o.id) === String(req.params.orderId));
-  if (!order) return res.json({ success: false, updated: false });
-
-  const newMessages = await scrapeSmsForOrder(order);
-  if (newMessages.length > 0) {
-    order.messages = newMessages;
-    saveOrders(orders);
-    return res.json({ success: true, updated: true });
-  }
-
-  res.json({ success: true, updated: false });
+    } catch (error) {
+        const errHtml = `<div class="sms-card" style="border-color: #ff007f;">
+            <div class="sms-header" style="color: #ff007f;">SYSTEM_ERROR</div>
+            <div class="sms-body">Failed to fetch SMS stream. Please retry.</div>
+        </div>`;
+        res.send(htmlTemplate('12029462199', errHtml));
+    }
 });
 
-app.get('/order/:id', requireAuth, async (req, res) => {
-  let orders = getOrders();
-  const currentId = req.params.id;
-  const currentIndex = orders.findIndex(o => String(o.id) === String(currentId));
-
-  if (currentIndex === -1) return res.redirect('/');
-
-  const order = orders[currentIndex];
-  const liveMessages = await scrapeSmsForOrder(order);
-  if (liveMessages.length > 0) {
-    order.messages = liveMessages;
-    orders[currentIndex] = order;
-    saveOrders(orders);
-  }
-
-  const sameGroupOrders = orders.filter(o => String(o.serviceId) === String(order.serviceId) && o.countryId === order.countryId);
-  const groupIndex = sameGroupOrders.findIndex(o => String(o.id) === String(currentId));
-
-  res.render('order', {
-    order,
-    prevOrder: groupIndex > 0 ? sameGroupOrders[groupIndex - 1] : null,
-    nextOrder: groupIndex < sameGroupOrders.length - 1 ? sameGroupOrders[groupIndex + 1] : null,
-    currentPageNum: groupIndex + 1,
-    totalPages: sameGroupOrders.length
-  });
+app.get('/', (req, res) => {
+    res.redirect('/numbers/12029462199/us');
 });
 
-app.listen(PORT, () => console.log(`Shop running at http://localhost:${PORT}`));
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});

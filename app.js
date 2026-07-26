@@ -3,6 +3,24 @@ const axios = require('axios');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// XSS ကာကွယ်ရန် သန့်စင်သည့် Function
+const escapeHtml = (str) => {
+    if (typeof str !== 'string') str = String(str);
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+};
+
+// စာသားထဲမှ OTP Code သို့မဟုတ် ဂဏန်းများကိုသာ သီးသန့်ရှာပေးသည့် Function
+const extractOtp = (text) => {
+    // စာသားထဲတွင် ၄ လုံးမှ ၈ လုံးအထိပါသော ဂဏန်း (OTP Code) ကို ရှာမည်
+    const match = text.match(/\b\d{4,8}\b/);
+    return match ? match[0] : null;
+};
+
 const htmlTemplate = (phoneNumber, messagesHtml) => `
 <!DOCTYPE html>
 <html lang="en">
@@ -72,6 +90,18 @@ const htmlTemplate = (phoneNumber, messagesHtml) => `
             border-bottom: 1px dashed rgba(0, 255, 204, 0.3);
             padding-bottom: 4px;
         }
+        .otp-box {
+            display: inline-block;
+            background-color: rgba(255, 0, 127, 0.2);
+            border: 1px solid #ff007f;
+            color: #ff007f;
+            font-size: 20px;
+            font-weight: bold;
+            padding: 6px 12px;
+            border-radius: 4px;
+            letter-spacing: 2px;
+            margin-top: 5px;
+        }
         .sms-body {
             font-size: 13px;
             word-break: break-all;
@@ -87,8 +117,8 @@ const htmlTemplate = (phoneNumber, messagesHtml) => `
 </head>
 <body>
 
-    <h1>+${phoneNumber}</h1>
-    <button class="btn-copy" onclick="navigator.clipboard.writeText('+${phoneNumber}'); alert('Number Copied!');">COPY NUMBER</button>
+    <h1>+${escapeHtml(phoneNumber)}</h1>
+    <button class="btn-copy" onclick="navigator.clipboard.writeText('+${escapeHtml(phoneNumber)}'); alert('Number Copied!');">COPY NUMBER</button>
 
     <div class="container">
         <div class="section-title">INCOMING_SMS_STREAM // LIVE</div>
@@ -105,26 +135,34 @@ app.get('/numbers/:id/:country', async (req, res) => {
     const { id, country } = req.params;
     
     try {
-        const apiResponse = await axios.get(`https://api.example.com/messages?id=${id}&country=${country}`).catch(() => null);
+        const apiResponse = await axios.get(`https://api.example.com/messages?id=${encodeURIComponent(id)}&country=${encodeURIComponent(country)}`).catch(() => null);
         let messages = apiResponse && apiResponse.data ? apiResponse.data : [];
+
+        // စာသားအရှည်ကြီးတွေနဲ့ OTP မပါတဲ့ ရှုပ်ထွေးနေသော message တွေကို Filter ပစ်ပါမည်
+        let validMessages = messages.filter(msg => {
+            const rawText = typeof msg === 'string' ? msg : (msg.text || JSON.stringify(msg));
+            return extractOtp(rawText) !== null; // OTP ဂဏန်းပါမှသာ လက်ခံမည်
+        });
 
         let messagesHtml = '';
 
-        if (!messages || messages.length === 0) {
-            messagesHtml = '<div class="no-msg">No incoming messages detected yet...</div>';
+        if (!validMessages || validMessages.length === 0) {
+            messagesHtml = '<div class="no-msg">No valid OTP messages detected yet...</div>';
         } else {
-            messagesHtml = messages.map((msg, index) => {
-                const textContent = typeof msg === 'string' ? msg : (msg.text || JSON.stringify(msg));
-                const timeText = msg.time || 'Just now';
+            messagesHtml = validMessages.map((msg, index) => {
+                const rawText = typeof msg === 'string' ? msg : (msg.text || JSON.stringify(msg));
+                const otpCode = extractOtp(rawText);
+                const timeText = msg.time || (index === 0 ? 'Just now' : 'Older');
 
                 return `
                     <div class="sms-card">
                         <div class="sms-header">
-                            <span>SMS_PACKET #${index + 1}</span>
-                            <span>${timeText}</span>
+                            <span>SMS_SERVICE</span>
+                            <span>${escapeHtml(timeText)}</span>
                         </div>
                         <div class="sms-body">
-                            ${textContent}
+                            <div>OTP_CODE:</div>
+                            <div class="otp-box">${escapeHtml(otpCode)}</div>
                         </div>
                     </div>
                 `;

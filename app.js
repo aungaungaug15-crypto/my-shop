@@ -1,8 +1,9 @@
 const express = require('express');
 const axios = require('axios');
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
+// Cyberpunk Theme ပါဝင်သော HTML Template
 const htmlTemplate = (phoneNumber, messagesHtml) => `
 <!DOCTYPE html>
 <html lang="en">
@@ -101,6 +102,7 @@ const htmlTemplate = (phoneNumber, messagesHtml) => `
 </html>
 `;
 
+// ဖုန်းနံပါတ်အလိုက် SMS များကို ဆွဲထုတ်ပြသသည့် Route
 app.get('/numbers/:id/:country', async (req, res) => {
     const { id, country } = req.params;
     
@@ -142,6 +144,7 @@ app.get('/numbers/:id/:country', async (req, res) => {
     }
 });
 
+// Home Route
 app.get('/', (req, res) => {
     res.redirect('/numbers/12029462199/us');
 });

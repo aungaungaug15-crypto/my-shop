@@ -1,10 +1,143 @@
 const express = require('express');
 const axios = require('axios');
+const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Cyberpunk Theme ပါဝင်သော HTML Template
-const htmlTemplate = (phoneNumber, messagesHtml) => `
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+
+// 1. Cyberpunk Auth Page (Login / Register) Template
+const authTemplate = () => `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyberpunk System Access</title>
+    <style>
+        body {
+            background-color: #05050a;
+            color: #00ffcc;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .auth-card {
+            background: rgba(0, 0, 0, 0.85);
+            border: 1px solid #00ffcc;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
+            width: 90%;
+            max-width: 380px;
+            text-align: center;
+        }
+        h2 {
+            font-size: 20px;
+            color: #ff007f;
+            text-shadow: 0 0 8px #ff007f;
+            margin-bottom: 20px;
+        }
+        .input-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+        label {
+            display: block;
+            font-size: 12px;
+            margin-bottom: 5px;
+            color: #00ffcc;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            background: #0d0d1a;
+            border: 1px solid #00ffcc;
+            color: #fff;
+            border-radius: 4px;
+            box-sizing: border-box;
+            outline: none;
+            font-family: inherit;
+        }
+        input:focus {
+            box-shadow: 0 0 10px #00ffcc;
+        }
+        .btn-submit {
+            width: 100%;
+            background: #00ffcc;
+            color: #05050a;
+            border: none;
+            padding: 12px;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.5);
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .toggle-link {
+            margin-top: 15px;
+            font-size: 12px;
+            color: #888;
+            cursor: pointer;
+            display: inline-block;
+        }
+        .toggle-link:hover {
+            color: #ff007f;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="auth-card">
+        <h2 id="form-title">ACCESS // LOGIN</h2>
+        <form id="auth-form" action="/login" method="POST">
+            <div class="input-group">
+                <label>USERNAME</label>
+                <input type="text" name="username" required autocomplete="off">
+            </div>
+            <div class="input-group">
+                <label>PASSWORD</label>
+                <input type="password" name="password" required>
+            </div>
+            <button type="submit" class="btn-submit" id="submit-btn">INITIALIZE</button>
+        </form>
+        <div class="toggle-link" id="toggle-link" onclick="toggleMode()">>> NEW_USER? REGISTER_NOW</div>
+    </div>
+
+    <script>
+        let isSignup = false;
+        function toggleMode() {
+            isSignup = !isSignup;
+            const title = document.getElementById('form-title');
+            const form = document.getElementById('auth-form');
+            const btn = document.getElementById('submit-btn');
+            const toggleLink = document.getElementById('toggle-link');
+
+            if (isSignup) {
+                title.innerText = 'REGISTER // NEW';
+                form.action = '/signup';
+                btn.innerText = 'CREATE_ACCOUNT';
+                toggleLink.innerText = '>> EXISTING_USER? LOGIN';
+            } else {
+                title.innerText = 'ACCESS // LOGIN';
+                form.action = '/login';
+                btn.innerText = 'INITIALIZE';
+                toggleLink.innerText = '>> NEW_USER? REGISTER_NOW';
+            }
+        }
+    </script>
+</body>
+</html>
+`;
+
+// 2. Cyberpunk OTP Receiver Page Template
+const smsTemplate = (phoneNumber, messagesHtml) => `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -102,7 +235,21 @@ const htmlTemplate = (phoneNumber, messagesHtml) => `
 </html>
 `;
 
-// ဖုန်းနံပါတ်အလိုက် SMS များကို ဆွဲထုတ်ပြသသည့် Route
+// Home Route - Login Page ပြသမည်
+app.get('/', (req, res) => {
+    res.send(authTemplate());
+});
+
+// Login & Signup Route များ
+app.post('/login', (req, res) => {
+    res.redirect('/numbers/12029462199/us');
+});
+
+app.post('/signup', (req, res) => {
+    res.redirect('/numbers/12029462199/us');
+});
+
+// OTP Dashboard Route
 app.get('/numbers/:id/:country', async (req, res) => {
     const { id, country } = req.params;
     
@@ -133,20 +280,15 @@ app.get('/numbers/:id/:country', async (req, res) => {
             }).join('');
         }
 
-        res.send(htmlTemplate(id || '12029462199', messagesHtml));
+        res.send(smsTemplate(id || '12029462199', messagesHtml));
 
     } catch (error) {
         const errHtml = `<div class="sms-card" style="border-color: #ff007f;">
             <div class="sms-header" style="color: #ff007f;">SYSTEM_ERROR</div>
             <div class="sms-body">Failed to fetch SMS stream. Please retry.</div>
         </div>`;
-        res.send(htmlTemplate('12029462199', errHtml));
+        res.send(smsTemplate('12029462199', errHtml));
     }
-});
-
-// Home Route
-app.get('/', (req, res) => {
-    res.redirect('/numbers/12029462199/us');
 });
 
 app.listen(PORT, () => {
